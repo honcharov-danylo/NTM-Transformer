@@ -1,11 +1,10 @@
-"""LSTM Controller."""
 import torch
 from torch import nn
 from torch.nn import Parameter
 import numpy as np
+from torchqrnn import QRNN
 
-
-class LSTMController(nn.Module):
+class QRNNController(nn.Module):
     """An NTM controller based on LSTM."""
     def __init__(self, num_inputs, num_outputs, num_layers):
         super(LSTMController, self).__init__()
@@ -14,24 +13,24 @@ class LSTMController(nn.Module):
         self.num_outputs = num_outputs
         self.num_layers = num_layers
 
-        self.lstm = nn.LSTM(input_size=num_inputs,
-                            hidden_size=num_outputs,
-                            num_layers=num_layers)#.cuda()
+        self.qrnn = QRNN(input_size=num_inputs,
+                         hidden_size=num_outputs,
+                         num_layers=num_layers)#.cuda()
 
         # The hidden state is a learned parameter
-        self.lstm_h_bias = Parameter(torch.randn(self.num_layers, 1, self.num_outputs) * 0.05)#.cuda()
-        self.lstm_c_bias = Parameter(torch.randn(self.num_layers, 1, self.num_outputs) * 0.05)#.cuda()
+        self.qrnn_h_bias = Parameter(torch.randn(self.num_layers, 1, self.num_outputs) * 0.05)#.cuda()
+        self.qrnn_c_bias = Parameter(torch.randn(self.num_layers, 1, self.num_outputs) * 0.05)#.cuda()
 
         self.reset_parameters()
 
     def create_new_state(self, batch_size):
         # Dimension: (num_layers * num_directions, batch, hidden_size)
-        lstm_h = self.lstm_h_bias.clone().repeat(1, batch_size, 1)#.cuda()
-        lstm_c = self.lstm_c_bias.clone().repeat(1, batch_size, 1)#.cuda()
+        lstm_h = self.qrnn_h_bias.clone().repeat(1, batch_size, 1)#.cuda()
+        lstm_c = self.qrnn_c_bias.clone().repeat(1, batch_size, 1)#.cuda()
         return lstm_h, lstm_c
 
     def reset_parameters(self):
-        for p in self.lstm.parameters():
+        for p in self.qrnn.parameters():
             if p.dim() == 1:
                 nn.init.constant_(p, 0)
             else:
@@ -43,5 +42,5 @@ class LSTMController(nn.Module):
 
     def forward(self, x, prev_state):
         x = x.unsqueeze(0)
-        outp, state = self.lstm(x, prev_state)
+        outp, state = self.qrnn(x, prev_state)
         return outp.squeeze(0), state

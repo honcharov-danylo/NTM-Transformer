@@ -14,9 +14,7 @@ from ntm.aio import EncapsulatedNTM
 def dataloader(num_batches,
                batch_size,
                seq_width,
-               min_len,
-               max_len,
-               test_data):
+               seq_len, test_data):
     """Generator of random sequences for the copy task.
 
     Creates random batches of "bits" sequences.
@@ -27,8 +25,7 @@ def dataloader(num_batches,
     :param num_batches: Total number of batches to generate.
     :param seq_width: The width of each item in the sequence.
     :param batch_size: Batch size.
-    :param min_len: Sequence minimum length.
-    :param max_len: Sequence maximum length.
+    :param seq_len: sequence length for the Priority Sort
 
     NOTE: The input width is `seq_width + 1`, the additional input
     contain the delimiter.
@@ -37,41 +34,47 @@ def dataloader(num_batches,
         test_data = []
     for batch_num in range(num_batches):
 
-        # All batches have the same sequence length
-        seq_len = random.randint(min_len, max_len)
-        seq = np.random.binomial(1, 0.5, (seq_len, batch_size, seq_width))
-        while tuple(seq) in test_data:
-            seq = np.random.binomial(1, 0.5, (seq_len, batch_size, seq_width))
 
+        seq = np.random.binomial(1, 0.5, (seq_len, batch_size, seq_width))
         seq = torch.from_numpy(seq)
 
-        # The input includes an additional channel used for the delimiter
-        inp = torch.zeros(seq_len + 1, batch_size, seq_width + 1)
+        while tuple(seq) in test_data:
+            seq = np.random.binomial(1, 0.5, (seq_len, batch_size, seq_width))
+            seq = torch.from_numpy(seq)
+
+        # The input includes an additional channel used for the priority
+        inp = torch.zeros(seq_len, batch_size, seq_width + 1)
         inp[:seq_len, :, :seq_width] = seq
-        inp[seq_len, :, seq_width] = 1.0 # delimiter in our control channel
-        outp = seq.clone()
+        priorities = torch.from_numpy(np.random.random(size=(seq_len, batch_size)) * 2 - 1).unsqueeze(2)
+        inp[:, :, seq_width:] = priorities  # 1.0 # priority in our control channel
+
+        sorted_order = np.argsort(priorities, axis=0).squeeze()
+        sorted_order = sorted_order.reshape((-1, batch_size))
+        #print(inp.shape)
+        outp = torch.from_numpy(np.swapaxes(np.stack([inp[:, i][sorted_order[:, i]] for i in range(batch_size)]), 0, 1))
+        outp = outp[:,:,:-1]
 
         yield batch_num+1, inp.float(), outp.float()
 
 
 @attrs
-class CopyTaskParams(object):
-    name = attrib(default="copy-task")
+class PrioritySortParams(object):
+    name = attrib(default="priority_sort")
     controller_size = attrib(default=100, convert=int)
-    controller_layers = attrib(default=1,convert=int)
+    controller_layers = attrib(default=4,convert=int)
     num_heads = attrib(default=1, convert=int)
     sequence_width = attrib(default=8, convert=int)
-    sequence_min_len = attrib(default=1,convert=int)
-    sequence_max_len = attrib(default=20, convert=int)
+    sequence_len = attrib(default=20,convert=int)
     memory_n = attrib(default=128, convert=int)
     memory_m = attrib(default=20, convert=int)
-    num_batches = attrib(default=100000, convert=int)
+    num_batches = attrib(default=50000, convert=int)
     batch_size = attrib(default=1, convert=int)
     rmsprop_lr = attrib(default=1e-4, convert=float)
     rmsprop_momentum = attrib(default=0.9, convert=float)
     rmsprop_alpha = attrib(default=0.95, convert=float)
     controller_type = attrib(default="LSTM")
     test_data = attrib(default=None)
+
 
 
 #
@@ -90,8 +93,8 @@ class CopyTaskParams(object):
 #
 
 @attrs
-class CopyTaskModelTraining(object):
-    params = attrib(default=Factory(CopyTaskParams))
+class PrioritySortModelTraining(object):
+    params = attrib(default=Factory(PrioritySortParams))
     net = attrib()
     dataloader = attrib()
     criterion = attrib()
@@ -111,7 +114,7 @@ class CopyTaskModelTraining(object):
     def default_dataloader(self):
         return dataloader(self.params.num_batches, self.params.batch_size,
                           self.params.sequence_width,
-                          self.params.sequence_min_len, self.params.sequence_max_len, self.params.test_data)
+                          self.params.sequence_len, self.params.test_data)
 
     @criterion.default
     def default_criterion(self):

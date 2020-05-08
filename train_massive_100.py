@@ -66,11 +66,11 @@ def progress_bar(batch_num, report_interval, last_loss):
 
 
 def save_checkpoint(net, name, args, batch_num, losses, costs, seq_lengths,
-                    controller_size, controller_layers, seq_len,
-                    test_loss_usual, test_loss_big):
+                    controller_size, controller_layers, seq_len):#,
+                    #test_loss_usual, test_loss_big):
     progress_clean()
 
-    basename = "{}/{}-{} - {} - {} - {} -batch-{}".format(args.checkpoint_path, name, controller_size, controller_layers, seq_len , args.seed, batch_num)
+    basename = "{}/{}-{}-{}-{}-{}-batch-{}".format(args.checkpoint_path, name, controller_size, controller_layers, seq_len , args.seed, batch_num)
     model_fname = basename + ".model"
     LOGGER.info("Saving model checkpoint to: '%s'", model_fname)
     torch.save(net.state_dict(), model_fname)
@@ -210,8 +210,8 @@ def train_model(model, args):
         if (args.checkpoint_interval != 0) and (batch_num % args.checkpoint_interval == 0):
             save_checkpoint(model.net, model.params.name, args,
                             batch_num, losses, costs, seq_lengths,
-                            model.params.controller_size, model.params.controller_layers, model.params.sequence_len,
-                            test_loss, test_loss_bigger)
+                            model.params.controller_size, model.params.controller_layers, model.params.sequence_len)#,
+                            #test_loss, test_loss_bigger)
 
     LOGGER.info("Done training.")
 
@@ -277,8 +277,17 @@ def init_model(args):
                               params.sequence_len, None))}
         import pickle
 
-        with open("{}-{}-{}".format(params.controller_size, params.controller_layers, params.sequence_len),'wb') as f:
+        with open("test_data-contr_size-{}-contr_layers-{}-seqlen-{}.pickle".format(params.controller_size, params.controller_layers, params.sequence_len),'wb') as f:
             pickle.dump(test_data, f)
+
+        test_data_big = {tuple(x): tuple(y) for _, x, y in list(dataloader(500, 1,
+                                                                       params.sequence_width,
+                                                                       params.sequence_len, None))}
+        with open("test_data_BIG-contr_size-{}-contr_layers-{}-seqlen-{}.pickle".format(params.controller_size,
+                                                                                    params.controller_layers,
+                                                                                    params.sequence_len*2), 'wb') as f:
+            pickle.dump(test_data_big, f)
+
         # print(list(dataloader(4, 1,
         #                       params.sequence_width,
         #                       params.sequence_len, None))[1])
@@ -303,15 +312,21 @@ def main():
 
     # Initialize arguments
     args = init_arguments()
-
     # Initialize random
     init_seed(args.seed)
+    print('INITIALIZED')
 
     # Initialize the model
-    model = init_model(args)
+    for controller_size in [100]:
+        for seq_len in [5,7,10]:
+            args.param = ['controller_size={}'.format(controller_size),'sequence_len={}'.format(seq_len),"controller_type=Transformer"]
+            print(args)
 
-    LOGGER.info("Total number of parameters: %d", model.net.calculate_num_params())
-    train_model(model, args)
+            model = init_model(args)
+
+            LOGGER.info("Total number of parameters: %d", model.net.calculate_num_params())
+            train_model(model, args)
+
 
 
 if __name__ == '__main__':

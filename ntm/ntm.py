@@ -3,7 +3,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-
 class NTM(nn.Module):
     """A Neural Turing Machine."""
     def __init__(self, num_inputs, num_outputs, controller, memory, heads):
@@ -49,6 +48,10 @@ class NTM(nn.Module):
         self.reset_parameters()
 
     def create_new_state(self, batch_size):
+        # init_r = [r.clone().repeat(batch_size, 1).cuda() for r in self.init_r]
+        # controller_state = self.controller.create_new_state(batch_size)
+        # heads_state = [head.create_new_state(batch_size).cuda() for head in self.heads]
+
         init_r = [r.clone().repeat(batch_size, 1) for r in self.init_r]
         controller_state = self.controller.create_new_state(batch_size)
         heads_state = [head.create_new_state(batch_size) for head in self.heads]
@@ -71,8 +74,9 @@ class NTM(nn.Module):
 
         # Use the controller to get an embeddings
         inp = torch.cat([x] + prev_reads, dim=1)
-        controller_outp, controller_state = self.controller(inp, prev_controller_state)
+        #print("input shape", inp.shape)
 
+        controller_outp, controller_state = self.controller(inp, prev_controller_state)
         # Read/Write from the list of heads
         reads = []
         heads_states = []

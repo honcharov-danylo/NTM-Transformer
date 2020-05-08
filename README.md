@@ -1,3 +1,56 @@
+## This is repo for final project in Neural Program Learning.
+### Danylo Honcharov
+### It is forked from [this repository](https://github.com/loudinthecloud/pytorch-ntm)
+Usage is very similar to the original repo:
+Execute ./train.py
+
+```
+usage: train.py [-h] [--seed SEED] [--task {copy,repeat-copy}] [-p PARAM]
+                [--checkpoint-interval CHECKPOINT_INTERVAL]
+                [--checkpoint-path CHECKPOINT_PATH]
+                [--report-interval REPORT_INTERVAL]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --seed SEED           Seed value for RNGs
+  --task {copy,repeat-copy}
+                        Choose the task to train (default: copy)
+  -p PARAM, --param PARAM
+                        Override model params. Example: "-pbatch_size=4
+                        -pnum_heads=2"
+  --checkpoint-interval CHECKPOINT_INTERVAL
+                        Checkpoint interval (default: 1000). Use 0 to disable
+                        checkpointing
+  --checkpoint-path CHECKPOINT_PATH
+                        Path for saving checkpoint data (default: './')
+  --report-interval REPORT_INTERVAL
+                        Reporting interval
+```
+
+There are new model params - "controller_type", which is "LSTM" by default, but can be "Transformer".
+
+Also there are new task for model evaluation - 'priority-sort'. Currently 'copy' task may be broken and will be fixed in the future.
+To install all the dependencies:
+
+1. install everything from requirements.txt
+
+
+To run training of the model on priority-sort with Transformer (priority-sort task is set by default):
+
+1. run `mkdir notebook/sort` to create new directory for checkpoints;
+2. run `train.py --seed 1  --checkpoint-interval 500 --checkpoint-path .notebooks/sort -pcontroller_type=Transformer`
+
+Test dataset will be saved in the current directory in the pickle file with format "test_data-contr_size-{}-contr_layers-{}-seqlen-{}.pickle" with parameters of model instead of {} symbols.
+
+This code is tested on the Linux systems.
+
+Also I get excited and almost finished QRNN controller (which I wasn't supposed to do), but it wasn't tested and may be broken.
+
+All notebooks, necessary for results reproducing can be found in the notebooks directory (though they are not polished yet).
+train_massive_50.py,train_massive_100.py, train_massive_200.py were used for the parallel training and should be ignored (and they not very different from train.py).
+
+## Readme from original Pytorch-NTM repo below:
+
 # PyTorch Neural Turing Machine (NTM)
 
 PyTorch implementation of [Neural Turing Machines](https://arxiv.org/abs/1410.5401) (NTM).

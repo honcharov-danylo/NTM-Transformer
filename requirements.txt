@@ -1,5 +1,5 @@
 argcomplete
-attrs
+attrs==18.1.0
 numpy
 pytest
 

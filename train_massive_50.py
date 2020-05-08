@@ -318,7 +318,7 @@ def main():
 
     # Initialize the model
     for controller_size in [50]:
-        for seq_len in [7]:
+        for seq_len in [5,7,10]:
             args.param = ['controller_size={}'.format(controller_size),'sequence_len={}'.format(seq_len),"controller_type=Transformer"]
             print(args)
 

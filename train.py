@@ -145,7 +145,7 @@ def evaluate(net, criterion, X, Y):
         y_out[i], state = net()
         states += [state]
 
-    loss = criterion(y_out, Y)
+    lossn = criterion(y_out, Y)
 
     y_out_binarized = y_out.clone().data
     y_out_binarized.apply_(lambda x: 0 if x < 0.5 else 1)
